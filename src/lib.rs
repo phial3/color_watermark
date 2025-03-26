@@ -19,8 +19,14 @@ pub fn embed_watermark(
 ) -> DynamicImage {
     let host = image::open(host_image).expect("Failed to open host image");
     let (h_width, h_height) = host.dimensions();
-    assert!(h_width == 512 && h_height == 512, "{}",
-            format!("Host image:'{}' must be 512 * 512, got {} * {}", host_image, h_width, h_height));
+    assert!(
+        h_width == 512 && h_height == 512,
+        "{}",
+        format!(
+            "Host image:'{}' must be 512 * 512, got {} * {}",
+            host_image, h_width, h_height
+        )
+    );
 
     // Convert the image to YCbCr colorspace
     let (mut y_plane, cb_plane, cr_plane) = colorspace::convert_to_YCbCr(&host);
