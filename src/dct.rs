@@ -1,17 +1,18 @@
-use rustdct::DctPlanner;
 use image::{DynamicImage, GenericImage, GenericImageView};
+use rustdct::DctPlanner;
 
-// This parameter is just for future possible reuse
+/// This parameter is just for future possible reuse
 const BLK_WIDTH: usize = 8;
 
+type BlocksType = Vec<Vec<f32>>;
+type ImageBlocks = (BlocksType, BlocksType, BlocksType);
+
 /// Splits a dynamic image into 8 * 8 blocks
-/// 
+///
 /// Returns (r, g, b) in form of Vec of (Vec of 64 * f32)
-/// 
+///
 /// For test purpose only
-#[doc(hidden)]
-pub fn split_image_into_blocks(image: &DynamicImage) -> 
-    (Vec<Vec<f32>>, Vec<Vec<f32>>, Vec<Vec<f32>>) {
+pub fn split_image_into_blocks(image: &DynamicImage) -> ImageBlocks {
     let (width, height) = image.dimensions();
     println!("Processing a {} * {} image", width, height);
 
@@ -45,7 +46,7 @@ pub fn split_image_into_blocks(image: &DynamicImage) ->
 }
 
 /// Splits a color plane into 8 * 8 blocks
-pub fn split_into_blocks(plane: &mut Vec<u8>, width: usize, height: usize) -> Vec<Vec<f32>> {
+pub fn split_into_blocks(plane: &mut [u8], width: usize, height: usize) -> BlocksType {
     let mut blocks = Vec::new();
 
     for y in (0..height).step_by(BLK_WIDTH) {
@@ -66,7 +67,7 @@ pub fn split_into_blocks(plane: &mut Vec<u8>, width: usize, height: usize) -> Ve
 }
 
 /// Merge a Vec of 8 * 8 blocks back to a color plane
-pub fn merge_into_plane(blocks: &Vec<Vec<f32>>, width: usize, height: usize) -> Vec<u8> {
+pub fn merge_into_plane(blocks: &[Vec<f32>], width: usize, height: usize) -> Vec<u8> {
     let mut plane = vec![0_u8; width * height];
 
     for (block_idx, block) in blocks.iter().enumerate() {
@@ -84,9 +85,9 @@ pub fn merge_into_plane(blocks: &Vec<Vec<f32>>, width: usize, height: usize) -> 
 }
 
 /// Applies 2D DCT2 on a Vec of 8 * 8 blocks
-/// 
+///
 /// Changes are made in-place
-pub fn apply_2d_dct(blocks: &mut Vec<Vec<f32>>) {
+pub fn apply_2d_dct(blocks: &mut [Vec<f32>]) {
     let mut planner = DctPlanner::new();
     let dct = planner.plan_dct2(BLK_WIDTH);
 
@@ -118,11 +119,10 @@ pub fn apply_2d_dct(blocks: &mut Vec<Vec<f32>>) {
     }
 }
 
-
 /// Applies 2D DCT3 (IDCT) on a Vec of 8 * 8 blocks
-/// 
+///
 /// Changes are made in-place
-pub fn apply_2d_idct(blocks: &mut Vec<Vec<f32>>) {
+pub fn apply_2d_idct(blocks: &mut [Vec<f32>]) {
     let mut planner = DctPlanner::new();
     let idct = planner.plan_dct3(BLK_WIDTH);
 
@@ -159,17 +159,22 @@ pub fn apply_2d_idct(blocks: &mut Vec<Vec<f32>>) {
 /// For test purpose only.
 #[doc(hidden)]
 pub fn reconstruct_image_from_rgb(
-    blocks_r: &Vec<Vec<f32>>,
-    blocks_g: &Vec<Vec<f32>>,
-    blocks_b: &Vec<Vec<f32>>,
+    blocks_r: &[Vec<f32>],
+    blocks_g: &[Vec<f32>],
+    blocks_b: &[Vec<f32>],
     width: u32,
-    height: u32
+    height: u32,
 ) -> DynamicImage {
     let mut image = DynamicImage::new_rgb8(width, height);
 
-    for (block_idx, ((block_r, block_g), block_b)) in blocks_r.iter().zip(blocks_g.iter()).zip(blocks_b.iter()).enumerate() {
+    for (block_idx, ((block_r, block_g), block_b)) in blocks_r
+        .iter()
+        .zip(blocks_g.iter())
+        .zip(blocks_b.iter())
+        .enumerate()
+    {
         let x = (block_idx % (width as usize / BLK_WIDTH)) * BLK_WIDTH;
-        let y = (block_idx / (width as usize/ BLK_WIDTH)) * BLK_WIDTH;
+        let y = (block_idx / (width as usize / BLK_WIDTH)) * BLK_WIDTH;
 
         for j in 0..BLK_WIDTH {
             for i in 0..BLK_WIDTH {
@@ -177,7 +182,11 @@ pub fn reconstruct_image_from_rgb(
                 let g = block_g[j * BLK_WIDTH + i] as u8;
                 let b = block_b[j * BLK_WIDTH + i] as u8;
                 let a = 255_u8;
-                image.put_pixel(x as u32 + i as u32, y as u32 + j as u32, image::Rgba([r, g, b, a]));
+                image.put_pixel(
+                    x as u32 + i as u32,
+                    y as u32 + j as u32,
+                    image::Rgba([r, g, b, a]),
+                );
             }
         }
     }

@@ -1,16 +1,16 @@
-use image::{GenericImage, DynamicImage};
-use bitvec::prelude::*;
+use bitvec::prelude::BitVec;
+use image::{DynamicImage, GenericImage};
 
 /// Recodes the original picture color info into 3-bit color representation scheme
 pub fn recode_to_3bits(image: &DynamicImage) -> BitVec {
-	let mut ret = BitVec::new();
+    let mut ret = BitVec::new();
 
     for byte in image.as_bytes() {
-    	if *byte > 127 {
-    		ret.push(true);
-    	} else {
-    		ret.push(false);
-    	}
+        if *byte > 127 {
+            ret.push(true);
+        } else {
+            ret.push(false);
+        }
     }
 
     ret
@@ -27,8 +27,12 @@ pub fn recode_to_rgb(bits: &BitVec, width: u32, height: u32) -> DynamicImage {
     for (i, bit) in bits.iter().enumerate() {
         if *bit.as_ref() {
             match i % 3 {
-                0 => { r = 255; }
-                1 => { g = 255; }
+                0 => {
+                    r = 255;
+                }
+                1 => {
+                    g = 255;
+                }
                 _ => {
                     let b = 255;
                     image.put_pixel(x, y, image::Rgba([r, g, b, 255]));
@@ -38,8 +42,12 @@ pub fn recode_to_rgb(bits: &BitVec, width: u32, height: u32) -> DynamicImage {
             };
         } else {
             match i % 3 {
-                0 => { r = 0; }
-                1 => { g = 0; }
+                0 => {
+                    r = 0;
+                }
+                1 => {
+                    g = 0;
+                }
                 _ => {
                     let b = 0;
                     image.put_pixel(x, y, image::Rgba([r, g, b, 255]));
